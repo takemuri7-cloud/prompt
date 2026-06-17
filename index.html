@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt Vault</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f8fafc;min-height:100vh;}
+button{cursor:pointer;}
+#app{max-width:600px;margin:0 auto;}
+
+.header{background:white;border-bottom:1px solid #e2e8f0;padding:16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+.header-title{font-weight:800;font-size:16px;color:#1e293b;}
+.header-count{font-size:12px;color:#94a3b8;}
+.btn-new{background:#4f46e5;color:white;border:none;border-radius:12px;padding:10px 18px;font-size:14px;font-weight:700;}
+
+.search-bar{padding:10px 16px;background:white;border-bottom:1px solid #f1f5f9;}
+.search-input{width:100%;border:1px solid #cbd5e1;border-radius:12px;padding:10px 16px;font-size:15px;outline:none;}
+
+.tag-bar{padding:10px 16px;display:flex;gap:8px;overflow-x:auto;background:white;border-bottom:1px solid #f1f5f9;}
+.tag-btn{font-size:13px;padding:6px 14px;border-radius:99px;font-weight:600;white-space:nowrap;border:none;background:#f1f5f9;color:#475569;}
+.tag-btn.active{background:#4f46e5;color:white;}
+
+.list{padding:12px 16px 80px;}
+.prompt-card{width:100%;text-align:left;background:white;border-radius:12px;padding:16px;margin-bottom:8px;display:block;border:none;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+.card-row{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.card-title{font-weight:700;font-size:15px;color:#1e293b;}
+.v-badge{font-size:12px;font-weight:700;color:#4f46e5;background:#eef2ff;padding:2px 8px;border-radius:99px;flex-shrink:0;}
+.card-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;}
+.tag{font-size:11px;padding:2px 8px;border-radius:99px;font-weight:600;}
+.card-body-preview{font-size:12px;color:#94a3b8;margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace;}
+.card-actions{display:flex;gap:6px;margin-top:10px;}
+.card-btn{font-size:12px;padding:5px 12px;border-radius:8px;border:none;font-weight:600;}
+.card-btn-view{background:#eef2ff;color:#4f46e5;}
+.card-btn-edit{background:#f0fdf4;color:#15803d;}
+.card-btn-del{background:#fff1f2;color:#e11d48;}
+.card-btn-up{background:#f8fafc;color:#64748b;padding:5px 10px;}
+.card-btn-down{background:#f8fafc;color:#64748b;padding:5px 10px;}
+
+.empty{text-align:center;padding:80px 0;color:#94a3b8;}
+.empty-icon{font-size:40px;margin-bottom:8px;}
+
+.screen{position:fixed;inset:0;background:white;display:flex;flex-direction:column;z-index:50;max-width:600px;margin:0 auto;}
+.screen-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #e2e8f0;background:white;flex-shrink:0;}
+.btn-back{color:#4f46e5;font-size:14px;font-weight:600;padding:4px 8px;background:none;border:none;}
+.screen-title{font-weight:700;font-size:14px;color:#1e293b;}
+.screen-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;}
+.screen-spacer{height:280px;}
+
+.field{margin-bottom:20px;}
+.field label{display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;}
+.field input,.field textarea{width:100%;border:1px solid #cbd5e1;border-radius:12px;padding:12px 16px;font-size:16px;outline:none;font-family:inherit;}
+.field textarea{font-family:monospace;resize:none;}
+.btn-save{width:100%;background:#4f46e5;color:white;border:none;border-radius:12px;padding:16px;font-size:16px;font-weight:700;}
+.btn-save:disabled{background:#a5b4fc;}
+
+.version-item{border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:8px;}
+.version-header{width:100%;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f8fafc;border:none;text-align:left;}
+.version-header .left{display:flex;align-items:center;gap:8px;}
+.version-header .right{display:flex;align-items:center;gap:8px;}
+.v-num{font-size:12px;font-weight:700;color:#4f46e5;background:#eef2ff;padding:2px 8px;border-radius:99px;}
+.v-note{font-size:13px;color:#64748b;}
+.v-date{font-size:11px;color:#94a3b8;}
+.v-arrow{font-size:11px;color:#94a3b8;}
+.version-body{border-top:1px solid #e2e8f0;background:white;display:none;}
+.version-body.open{display:block;}
+.version-body pre{padding:12px 16px;font-size:13px;color:#334155;font-family:monospace;white-space:pre-wrap;word-break:break-all;line-height:1.6;}
+.version-body .copy-area{padding:0 16px 12px;}
+.btn-copy{background:#4f46e5;color:white;border:none;border-radius:8px;padding:8px 16px;font-size:13px;}
+.btn-add-version{width:100%;border:2px dashed #a5b4fc;color:#4f46e5;background:transparent;border-radius:12px;padding:16px;font-size:15px;font-weight:600;margin-top:8px;}
+
+.tag-colors-0{background:#e0e7ff;color:#3730a3;}
+.tag-colors-1{background:#d1fae5;color:#065f46;}
+.tag-colors-2{background:#fef3c7;color:#92400e;}
+.tag-colors-3{background:#ffe4e6;color:#9f1239;}
+.tag-colors-4{background:#e0f2fe;color:#0c4a6e;}
+.tag-colors-5{background:#ede9fe;color:#4c1d95;}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:white;padding:10px 20px;border-radius:99px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity 0.2s;}
+.toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div>
+      <div class="header-title">Prompt Vault</div>
+      <div class="header-count" id="count"></div>
+    </div>
+    <button class="btn-new" onclick="showNew()">+ 新規作成</button>
+  </div>
+  <div class="search-bar">
+    <input class="search-input" id="search" placeholder="🔍 タイトル・本文・タグで検索..." oninput="render()">
+  </div>
+  <div class="tag-bar" id="tag-bar"></div>
+  <div class="list" id="list"></div>
+</div>
+
+<!-- Detail -->
+<div class="screen" id="screen-detail" style="display:none">
+  <div class="screen-header">
+    <button class="btn-back" onclick="closeDetail()">← 戻る</button>
+    <span class="screen-title" id="detail-title"></span>
+    <div style="width:60px"></div>
+  </div>
+  <div class="screen-body" id="detail-body"></div>
+</div>
+
+<!-- New / Edit -->
+<div class="screen" id="screen-form" style="display:none">
+  <div class="screen-header">
+    <button class="btn-back" onclick="closeForm()">← 戻る</button>
+    <span class="screen-title" id="form-title-label"></span>
+    <div style="width:60px"></div>
+  </div>
+  <div class="screen-body">
+    <div class="field"><label>タイトル</label><input id="f-title" placeholder="例：議事録要約"></div>
+    <div class="field"><label>タグ（カンマ区切り）</label><input id="f-tags" placeholder="例：要約, Claude"></div>
+    <div class="field"><label>プロンプト本文</label><textarea id="f-body" rows="8" placeholder="プロンプトを入力..."></textarea></div>
+    <div class="field"><label>メモ（任意）</label><input id="f-note" placeholder="初版、など"></div>
+    <button class="btn-save" id="f-save-btn" onclick="saveForm()">保存</button>
+    <div class="screen-spacer"></div>
+  </div>
+</div>
+
+<!-- Add Version -->
+<div class="screen" id="screen-addver" style="display:none">
+  <div class="screen-header">
+    <button class="btn-back" onclick="closeAddVer()">← 戻る</button>
+    <span class="screen-title">新バージョン追加</span>
+    <div style="width:60px"></div>
+  </div>
+  <div class="screen-body">
+    <div id="addver-base" style="background:#f8fafc;border-radius:12px;padding:12px;margin-bottom:20px;font-size:13px;color:#64748b;"></div>
+    <div class="field"><label>プロンプト本文</label><textarea id="av-body" rows="8"></textarea></div>
+    <div class="field"><label>変更メモ</label><input id="av-note" placeholder="何を変えたか"></div>
+    <button class="btn-save" id="av-btn" onclick="saveAddVer()">保存</button>
+    <div class="screen-spacer"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let prompts = JSON.parse(localStorage.getItem('pv2') || 'null') || [
+  {id:"1",title:"議事録要約",tags:["要約","Claude"],versions:[
+    {version:1,body:"以下の議事録を箇条書きで要約してください。\n\n{{議事録}}",note:"初版",createdAt:"2026-06-01"},
+    {version:2,body:"以下の議事録を「決定事項」「TODO」「議論中」の3つのセクションに分けて要約してください。\n\n{{議事録}}",note:"セクション分けを追加",createdAt:"2026-06-10"}
+  ]},
+  {id:"2",title:"メール返信ドラフト",tags:["ライティング","Gemini"],versions:[
+    {version:1,body:"以下のメールへの返信を丁寧なビジネス文体で書いてください。\n\n{{メール本文}}",note:"初版",createdAt:"2026-06-05"}
+  ]}
+];
+
+let filterTag = null;
+let currentId = null;
+let editingId = null; // null=新規, id=編集中
+
+function save(){ localStorage.setItem('pv2', JSON.stringify(prompts)); }
+
+function tagColorClass(tag){
+  let h=0; for(let i=0;i<tag.length;i++) h=(h*31+tag.charCodeAt(i))%6;
+  return 'tag-colors-'+h;
+}
+function formatDate(str){
+  const d=new Date(str);
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+function render(){
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const allTags=[...new Set(prompts.flatMap(p=>p.tags))];
+  let filtered = filterTag ? prompts.filter(p=>p.tags.includes(filterTag)) : [...prompts];
+  if(q) filtered = filtered.filter(p=>
+    p.title.toLowerCase().includes(q) ||
+    p.tags.some(t=>t.toLowerCase().includes(q)) ||
+    p.versions.some(v=>v.body.toLowerCase().includes(q))
+  );
+
+  document.getElementById('count').textContent = prompts.length+' 件';
+
+  const tb=document.getElementById('tag-bar');
+  tb.innerHTML=`<button class="tag-btn ${!filterTag?'active':''}" onclick="setFilter(null)">すべて</button>`;
+  allTags.forEach(t=>{
+    tb.innerHTML+=`<button class="tag-btn ${filterTag===t?'active':''}" onclick="setFilter('${t}')">${t}</button>`;
+  });
+
+  const list=document.getElementById('list');
+  if(filtered.length===0){
+    list.innerHTML=`<div class="empty"><div class="empty-icon">${q?'🔍':'📭'}</div><div>${q?'見つかりませんでした':'プロンプトがまだありません'}</div></div>`;
+    return;
+  }
+  list.innerHTML=filtered.map((p,i)=>{
+    const latest=p.versions[p.versions.length-1];
+    const tagsHtml=p.tags.map(t=>`<span class="tag ${tagColorClass(t)}">${t}</span>`).join('');
+    const realIdx=prompts.indexOf(p);
+    return `<div class="prompt-card">
+      <div class="card-row"><span class="card-title">${p.title}</span><span class="v-badge">v${latest.version}</span></div>
+      <div class="card-tags">${tagsHtml}</div>
+      <div class="card-body-preview">${latest.body}</div>
+      <div class="card-actions">
+        <button class="card-btn card-btn-view" onclick="showDetail('${p.id}')">詳細</button>
+        <button class="card-btn card-btn-edit" onclick="openEdit('${p.id}')">編集</button>
+        <button class="card-btn card-btn-del" onclick="deletePrompt('${p.id}')">削除</button>
+        <button class="card-btn card-btn-up" onclick="moveUp(${realIdx})" ${realIdx===0?'disabled style="opacity:0.3"':''}>↑</button>
+        <button class="card-btn card-btn-down" onclick="moveDown(${realIdx})" ${realIdx===prompts.length-1?'disabled style="opacity:0.3"':''}>↓</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setFilter(tag){ filterTag=tag; render(); }
+
+function moveUp(i){
+  if(i===0) return;
+  [prompts[i-1],prompts[i]]=[prompts[i],prompts[i-1]];
+  save(); render();
+}
+function moveDown(i){
+  if(i===prompts.length-1) return;
+  [prompts[i+1],prompts[i]]=[prompts[i],prompts[i+1]];
+  save(); render();
+}
+
+function deletePrompt(id){
+  if(!confirm('削除しますか？')) return;
+  prompts=prompts.filter(p=>p.id!==id);
+  save(); render();
+  showToast('削除しました');
+}
+
+// Detail
+function showDetail(id){
+  currentId=id;
+  const p=prompts.find(x=>x.id===id);
+  document.getElementById('detail-title').textContent=p.title;
+  const tagsHtml=p.tags.map(t=>`<span class="tag ${tagColorClass(t)}" style="font-size:13px;padding:4px 12px">${t}</span>`).join('');
+  const versionsHtml=[...p.versions].reverse().map((v,i)=>`
+    <div class="version-item">
+      <button class="version-header" onclick="toggleVersion(this)">
+        <div class="left"><span class="v-num">v${v.version}</span>${v.note?`<span class="v-note">${v.note}</span>`:''}</div>
+        <div class="right"><span class="v-date">${formatDate(v.createdAt)}</span><span class="v-arrow">${i===0?'▲':'▼'}</span></div>
+      </button>
+      <div class="version-body ${i===0?'open':''}">
+        <pre>${v.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+        <div class="copy-area"><button class="btn-copy" data-text="${encodeURIComponent(v.body)}" onclick="copyText(this)">コピー</button></div>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('detail-body').innerHTML=`
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">${tagsHtml}</div>
+    ${versionsHtml}
+    <button class="btn-add-version" onclick="showAddVer()">+ 新しいバージョンを追加</button>
+    <div class="screen-spacer"></div>
+  `;
+  document.getElementById('screen-detail').style.display='flex';
+}
+function toggleVersion(btn){
+  const body=btn.nextElementSibling;
+  const arrow=btn.querySelector('.v-arrow');
+  const isOpen=body.classList.contains('open');
+  body.classList.toggle('open',!isOpen);
+  arrow.textContent=isOpen?'▼':'▲';
+}
+function copyText(btn){
+  const text=decodeURIComponent(btn.dataset.text);
+  navigator.clipboard?.writeText(text).then(()=>{
+    btn.textContent='✓ コピー済';
+    setTimeout(()=>btn.textContent='コピー',1500);
+  });
+}
+function closeDetail(){ document.getElementById('screen-detail').style.display='none'; currentId=null; }
+
+// New / Edit Form
+function showNew(){
+  editingId=null;
+  document.getElementById('form-title-label').textContent='新規プロンプト';
+  document.getElementById('f-save-btn').textContent='保存';
+  ['f-title','f-tags','f-body','f-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('screen-form').style.display='flex';
+}
+function openEdit(id){
+  editingId=id;
+  const p=prompts.find(x=>x.id===id);
+  const latest=p.versions[p.versions.length-1];
+  document.getElementById('form-title-label').textContent='プロンプトを編集';
+  document.getElementById('f-save-btn').textContent='更新';
+  document.getElementById('f-title').value=p.title;
+  document.getElementById('f-tags').value=p.tags.join(', ');
+  document.getElementById('f-body').value=latest.body;
+  document.getElementById('f-note').value=latest.note||'';
+  document.getElementById('screen-form').style.display='flex';
+}
+function closeForm(){ document.getElementById('screen-form').style.display='none'; }
+function saveForm(){
+  const title=document.getElementById('f-title').value.trim();
+  const body=document.getElementById('f-body').value.trim();
+  if(!title||!body){ alert('タイトルと本文は必須です'); return; }
+  const tags=document.getElementById('f-tags').value.split(/[,、\s]+/).map(t=>t.trim()).filter(Boolean);
+  const note=document.getElementById('f-note').value.trim();
+
+  if(editingId){
+    // 編集：最新バージョンを上書き
+    const p=prompts.find(x=>x.id===editingId);
+    p.title=title; p.tags=tags;
+    const latest=p.versions[p.versions.length-1];
+    latest.body=body; if(note) latest.note=note;
+    showToast('更新しました');
+  } else {
+    // 新規
+    prompts.push({id:String(Date.now()),title,tags,versions:[{version:1,body,note:note||'初版',createdAt:new Date().toISOString().slice(0,10)}]});
+    showToast('保存しました');
+  }
+  save(); render(); closeForm();
+}
+
+// Add Version
+function showAddVer(){
+  const p=prompts.find(x=>x.id===currentId);
+  const latest=p.versions[p.versions.length-1];
+  document.getElementById('addver-base').innerHTML=`<strong>v${latest.version}</strong> をベースに編集`;
+  document.getElementById('av-body').value=latest.body;
+  document.getElementById('av-note').value='';
+  document.getElementById('av-btn').textContent=`v${latest.version+1} を保存`;
+  document.getElementById('screen-addver').style.display='flex';
+}
+function closeAddVer(){
+  document.getElementById('screen-addver').style.display='none';
+  showDetail(currentId);
+}
+function saveAddVer(){
+  const body=document.getElementById('av-body').value.trim();
+  const note=document.getElementById('av-note').value.trim();
+  if(!body) return;
+  const p=prompts.find(x=>x.id===currentId);
+  const nextV=p.versions[p.versions.length-1].version+1;
+  p.versions.push({version:nextV,body,note:note||`v${nextV}`,createdAt:new Date().toISOString().slice(0,10)});
+  save();
+  document.getElementById('screen-addver').style.display='none';
+  showDetail(currentId);
+  showToast(`v${nextV} を追加しました`);
+}
+
+render();
+</script>
+</body>
+</html>
